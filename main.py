@@ -205,19 +205,75 @@ def plot(base, skip=None, bg=True):
     plt.show()
 
 baseFrames = loadDataset(r"pre_release\pre_release\sample_data\healed")
-# baseScores, skipScores = getBaseScores(baseFrames, calculate_hist), getSkipScores(baseFrames, calculate_hist)
-print("calc hist", prop(getSkipSensitivities(baseFrames, calculate_hist)))
-print("calc sad", prop(getSkipSensitivities(baseFrames, calculate_sad)))
-print("calc mse", prop(getSkipSensitivities(baseFrames, calculate_mse)))
-print("calc block hist 2", prop(getSkipSensitivities(baseFrames, lambda img1, img2: calculate_block_hist(img1, img2, blocks=2))))
-print("calc block hist 4", prop(getSkipSensitivities(baseFrames, lambda img1, img2: calculate_block_hist(img1, img2, blocks=3))))
-print("calc block hist 4", prop(getSkipSensitivities(baseFrames, lambda img1, img2: calculate_block_hist(img1, img2, blocks=4))))
-# print("calc block hist 5", prop(getSkipSensitivities(baseFrames, lambda img1, img2: calculate_block_hist(img1, img2, blocks=5))))
-# print("calc block hist 6", prop(getSkipSensitivities(baseFrames, lambda img1, img2: calculate_block_hist(img1, img2, blocks=6))))
-# print("calc block hist 7", prop(getSkipSensitivities(baseFrames, lambda img1, img2: calculate_block_hist(img1, img2, blocks=7))))
-# print("calc block hist 8", prop(getSkipSensitivities(baseFrames, lambda img1, img2: calculate_block_hist(img1, img2, blocks=8))))
 
-print("calc edge change", prop(getSkipSensitivities(baseFrames, calculate_edge_change_ratio)))
+import numpy as np
+
+# Assuming getSkipSensitivities function and the calculation methods are defined elsewhere
+hist_sensitivities = getSkipSensitivities(baseFrames, calculate_hist)
+sad_sensitivities = getSkipSensitivities(baseFrames, calculate_sad)
+mse_sensitivities = getSkipSensitivities(baseFrames, calculate_mse)
+block_hist_sensitivities = getSkipSensitivities(baseFrames, calculate_block_hist)
+edge_change_ratio_sensitivities = getSkipSensitivities(baseFrames, calculate_edge_change_ratio)
+
+# Print proportions using the prop() function for each type of sensitivity
+print("Proportion of Histogram Sensitivities:", prop(hist_sensitivities))
+print("Proportion of SAD Sensitivities:", prop(sad_sensitivities))
+print("Proportion of MSE Sensitivities:", prop(mse_sensitivities))
+print("Proportion of Block Histogram Sensitivities:", prop(block_hist_sensitivities))
+print("Proportion of Edge Change Ratio Sensitivities:", prop(edge_change_ratio_sensitivities))
+
+# Convert the lists to numpy arrays if they are not already
+hist_sensitivities = np.array(hist_sensitivities)
+sad_sensitivities = np.array(sad_sensitivities)
+mse_sensitivities = np.array(mse_sensitivities)
+block_hist_sensitivities = np.array(block_hist_sensitivities)
+edge_change_ratio_sensitivities = np.array(edge_change_ratio_sensitivities)
+
+# Stack the arrays to form a 2D array where each column is one set of sensitivities
+data = np.column_stack((hist_sensitivities, sad_sensitivities, mse_sensitivities, block_hist_sensitivities, edge_change_ratio_sensitivities))
+
+# Compute the correlation matrix
+correlation_matrix = np.corrcoef(data, rowvar=False)  # Ensure columns are variables
+
+# Print correlation matrix
+print("Correlation Matrix:")
+print(correlation_matrix)
+
+import numpy as np
+from sklearn.metrics import mutual_info_score
+from sklearn.preprocessing import MinMaxScaler
+
+# Assuming 'data' and 'labels' are defined as in the previous code snippets
+labels = ["Histogram", "SAD", "MSE", "Block Histogram", "Edge Change Ratio"]
+prop_scores = np.array([0.5881, 0.6178, 0.5606, 0.6316, 0.4416])
+
+# Normalize prop() scores
+scaler = MinMaxScaler()
+normalized_props = scaler.fit_transform(prop_scores.reshape(-1, 1)).flatten()
+
+# Compute mutual information matrix
+mi_matrix = np.zeros((data.shape[1], data.shape[1]))
+for i in range(data.shape[1]):
+    for j in range(data.shape[1]):
+        mi_matrix[i, j] = mutual_info_score(data[:, i], data[:, j])
+
+# Calculate weighted mutual information
+weighted_mi_matrix = np.zeros_like(mi_matrix)
+for i in range(data.shape[1]):
+    for j in range(i + 1, data.shape[1]):
+        weight = (normalized_props[i] + normalized_props[j]) / 2
+        weighted_mi_matrix[i, j] = mi_matrix[i, j] * weight
+        weighted_mi_matrix[j, i] = weighted_mi_matrix[i, j]  # Symmetric matrix
+
+# Print the weighted mutual information matrix with labels
+print("Weighted Mutual Information Matrix:")
+for i in range(len(labels)):
+    print(f"{labels[i]:>15}", end=" ")
+    for j in range(len(labels)):
+        print(f"{weighted_mi_matrix[i, j]:.4f}", end=" ")
+    print()  # New line for each metric
+
+
 pass
 # plot(sens)
 # plot(baseScores, skipScores)
